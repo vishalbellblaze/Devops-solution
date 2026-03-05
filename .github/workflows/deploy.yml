@@ -57,14 +57,12 @@ jobs:
         run: echo "ip=$(terraform output -raw instance_ip)" >> $GITHUB_OUTPUT
       
       - name: Deploy to EC2
-        env:
-          REGISTRY: ${{ steps.ecr-login.outputs.registry }}
-          EC2_IP: ${{ steps.ec2-ip.outputs.ip }}
-        run: |
-          echo "${{ secrets.EC2_SSH_KEY }}" > key.pem
-          chmod 600 key.pem
-          sleep 60
-          ssh -o StrictHostKeyChecking=no -i key.pem ec2-user@$EC2_IP << 'EOF'
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ steps.ec2-ip.outputs.ip }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
             aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.ecr-login.outputs.registry }}
             docker pull ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_BACKEND_REPO }}:latest
             docker pull ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_FRONTEND_REPO }}:latest
@@ -72,7 +70,6 @@ jobs:
             docker rm backend frontend || true
             docker run -d --name backend -p 8000:8000 -e DEBUG=False -e ALLOWED_HOSTS=* ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_BACKEND_REPO }}:latest
             docker run -d --name frontend -p 80:80 --link backend:backend ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_FRONTEND_REPO }}:latest
-          EOF
       
       - name: Output URL
         run: echo "Application deployed at http://${{ steps.ec2-ip.outputs.ip }}"
