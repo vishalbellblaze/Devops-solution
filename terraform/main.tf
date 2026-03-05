@@ -20,6 +20,12 @@ data "aws_ami" "amazon_linux" {
 resource "aws_security_group" "app_sg" {
   name_prefix = "devops-app-sg-"
   ingress {
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
@@ -56,6 +62,11 @@ resource "aws_iam_role_policy_attachment" "ecr_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
+resource "aws_iam_role_policy_attachment" "ssm_policy" {
+  role       = aws_iam_role.ec2_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+}
+
 resource "aws_iam_instance_profile" "ec2_profile" {
   name_prefix = "ec2-profile-"
   role        = aws_iam_role.ec2_role.name
@@ -66,6 +77,7 @@ resource "aws_instance" "app_server" {
   instance_type        = "t3.micro"
   security_groups      = [aws_security_group.app_sg.name]
   iam_instance_profile = aws_iam_instance_profile.ec2_profile.name
+  key_name             = "docker-sample"
   user_data = <<-EOF
     #!/bin/bash
     yum update -y

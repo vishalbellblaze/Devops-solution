@@ -56,12 +56,16 @@ jobs:
         working-directory: ./terraform
         run: echo "ip=$(terraform output -raw instance_ip)" >> $GITHUB_OUTPUT
       
-      - name: Deploy to EC2
+      - name: Wait for EC2
+        run: sleep 90
+      
+      - name: SSH into EC2 and deploy app
         uses: appleboy/ssh-action@master
         with:
           host: ${{ steps.ec2-ip.outputs.ip }}
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
+          timeout: 60s
           script: |
             aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ steps.ecr-login.outputs.registry }}
             docker pull ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_BACKEND_REPO }}:latest
