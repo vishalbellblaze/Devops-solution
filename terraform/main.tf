@@ -65,7 +65,7 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 
 resource "aws_instance" "app_server" {
   ami                    = var.ami_id
-  instance_type          = "t2.micro"
+  instance_type          = "t3.micro"
   security_groups        = [aws_security_group.app_sg.name]
   iam_instance_profile   = aws_iam_instance_profile.ec2_profile.name
   key_name               = var.key_name != "" ? var.key_name : null
